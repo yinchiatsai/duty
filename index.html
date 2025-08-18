@@ -52,36 +52,62 @@
       text-shadow: 0 0 3px black;
     }
 
+
+
+
     .duty-1 {
       background-color: #FFA07A;
     }
 
     /* 宸瑜 - 橘色 */
+
+
+
     .duty-2 {
       background-color: #ADD8E6;
     }
 
     /* 宸瑄 - 淺藍 */
+
+
+
     .duty-3 {
       background-color: #98FB98;
     }
 
-    /* 量量 - 淺綠 */
+    /* 旻億 - 淺綠 */
+
+
+
     .duty-4 {
       background-color: #FFD700;
     }
 
     /* 品潔 - 金色 */
+
+
+
     .duty-5 {
       background-color: #FFC0CB;
     }
 
-    /* 依伶 - 粉紅 */
+    /* 欣玫 - 粉紅 */
+
+
+
     .duty-6 {
       background-color: #DDA0DD;
     }
 
-    /* 喜得 - 淡紫 */
+    /* 方青 - 淡紫 */
+
+
+    .duty-7 {
+      background-color: #0f485b;
+    }
+
+    /* 佩璇 - 淡紫 */
+
 
     .legend-container {
       display: flex;
@@ -142,23 +168,26 @@
       <div class="legend-color" style="background-color: #ADD8E6;"></div> 宸瑄
     </div>
     <div class="legend-item">
-      <div class="legend-color" style="background-color: #98FB98;"></div> 量量
+      <div class="legend-color" style="background-color: #98FB98;"></div> 旻億
     </div>
     <div class="legend-item">
       <div class="legend-color" style="background-color: #FFD700;"></div> 品潔
     </div>
     <div class="legend-item">
-      <div class="legend-color" style="background-color: #FFC0CB;"></div> 依伶
+      <div class="legend-color" style="background-color: #FFC0CB;"></div> 欣玫
     </div>
     <div class="legend-item">
-      <div class="legend-color" style="background-color: #DDA0DD;"></div> 黏黏
+      <div class="legend-color" style="background-color: #DDA0DD;"></div> 方青
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background-color: #0f485b;"></div> 佩璇
     </div>
   </div>
 
   <script>
-    const dutyRoster = ["宸瑜", "宸瑄", "量量", "品潔", "依伶", "黏黏"];
+    const dutyRoster = ["欣玫", "方青", "佩璇", "宸瑜", "宸瑄", "旻億", "品潔"];
     const baseDate = new Date(2024, 2, 17);
-    const offset = 2;
+    const offset = 0;
     let currentDate = new Date();
 
     function generateCalendar(date) {
@@ -217,6 +246,9 @@
     }
 
     generateCalendar(currentDate);
+
+
+
   </script>
 </body>
 
