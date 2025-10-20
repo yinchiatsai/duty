@@ -2,254 +2,355 @@
 <html lang="zh-TW">
 
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>值日生日曆（含背景與顏色示意）</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 20px;
-      background-image: url('背景圖.png');
-      background-size: cover;
-      background-position: center;
-      background-attachment: fixed;
-    }
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>值日生輪替表（簡化可維護版）</title>
+    <style>
+        :root {
+            --brand: #3e6066;
+            --bg: #fdfcf8;
+            --card: #ffffffd9;
+            --today-bg: #fff7cc;
+            --today-border: #f3b23c;
+            --muted: #5f6a63;
+            --border: rgba(0, 0, 0, 0.08);
+        }
 
-    .nav-buttons {
-      margin-bottom: 10px;
-    }
+        * {
+            box-sizing: border-box
+        }
 
-    button {
-      margin: 0 5px;
-      padding: 5px 10px;
-      font-size: 14px;
-    }
+        body {
+            font-family: 'Noto Serif TC', 'Noto Sans TC', serif;
+            background: linear-gradient(135deg, #faf8f3 0%, #f6f4ef 100%);
+            color: #3b3b3b;
+            margin: 0;
+            padding: 24px
+        }
 
-    table {
-      width: 100%;
-      max-width: 400px;
-      margin: auto;
-      border-collapse: collapse;
-      background: white;
-      opacity: 0.9;
-    }
+        h1 {
+            text-align: center;
+            color: var(--brand);
+            letter-spacing: 1px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            font-size: 28px
+        }
 
-    th,
-    td {
-      border: 1px solid #ccc;
-      padding: 10px;
-      text-align: center;
-    }
+        .sub {
+            text-align: center;
+            color: var(--muted);
+            font-size: 15px;
+            margin-bottom: 16px
+        }
 
-    th {
-      background-color: #f0f0f0;
-    }
+        .shell {
+            max-width: 980px;
+            margin: auto
+        }
 
-    .today {
-      font-weight: bold;
-      color: white;
-      text-shadow: 0 0 3px black;
-    }
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            background: var(--card);
+            border-radius: 18px;
+            padding: 12px 18px;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, .08);
+            margin-bottom: 10px
+        }
 
+        .toolbar-left,
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap
+        }
 
+        .btn {
+            background: var(--brand);
+            color: #fff;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            letter-spacing: .3px;
+            transition: .25s;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, .08)
+        }
 
+        .btn:hover {
+            background: #2e4d53;
+            transform: translateY(-1px)
+        }
 
-    .duty-1 {
-      background-color: #FFA07A;
-    }
+        .ghost {
+            background: #e7efee;
+            color: #2f4a4f
+        }
 
-    /* 宸瑜 - 橘色 */
+        .month-title {
+            font-weight: 700;
+            color: #2f3e40;
+            font-size: 18px
+        }
 
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            color: #4b5563;
+            margin: 12px 0 6px;
+            font-weight: 600
+        }
 
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px
+        }
 
-    .duty-2 {
-      background-color: #ADD8E6;
-    }
+        .day {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 12px 8px;
+            min-height: 100px;
+            position: relative;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, .04);
+            transition: all .15s ease
+        }
 
-    /* 宸瑄 - 淺藍 */
+        .day:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, .08)
+        }
 
+        .day.muted {
+            opacity: .55
+        }
 
+        .date-badge {
+            font-weight: 700;
+            color: #374151;
+            font-size: 15px
+        }
 
-    .duty-3 {
-      background-color: #98FB98;
-    }
+        .person-tag {
+            margin-top: 8px;
+            padding: 6px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            color: #2f3a3a;
+            display: inline-block;
+            border: 1px dashed var(--border);
+            box-shadow: inset 0 -1px 0 rgba(0, 0, 0, .06)
+        }
 
-    /* 旻億 - 淺綠 */
+        /* 今日強調 */
+        .today {
+            border: 3px solid var(--today-border);
+            background: var(--today-bg);
+            outline: 3px solid rgba(243, 178, 60, .4);
+            outline-offset: 3px;
+            box-shadow: 0 0 12px rgba(243, 178, 60, .5);
+            transform: scale(1.02);
+            transition: all .3s ease
+        }
 
+        .sticker {
+            position: absolute;
+            top: 6px;
+            right: 8px;
+            font-size: 11px;
+            color: #777;
+            font-style: italic
+        }
 
+        .panel {
+            background: var(--card);
+            border-radius: 18px;
+            padding: 18px;
+            margin-top: 16px;
+            box-shadow: 0 5px 16px rgba(0, 0, 0, .06)
+        }
 
-    .duty-4 {
-      background-color: #FFD700;
-    }
+        /* 圖例固定四欄（桌機），平板三欄、手機兩欄 */
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            justify-content: center;
+            align-items: stretch;
+            padding: 10px 0;
+            margin: 0 auto;
+            width: 100%;
+            max-width: 900px
+        }
 
-    /* 品潔 - 金色 */
+        @media(max-width:1023px) {
+            .legend {
+                grid-template-columns: repeat(3, 1fr)
+            }
+        }
 
+        @media(max-width:640px) {
+            .legend {
+                grid-template-columns: repeat(2, 1fr)
+            }
+        }
 
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 10px 12px;
+            background: #fffefc;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, .04);
+            min-width: 0
+        }
 
-    .duty-5 {
-      background-color: #FFC0CB;
-    }
+        .color-box {
+            width: 18px;
+            height: 18px;
+            border-radius: 5px;
+            border: 1px solid var(--border);
+            flex-shrink: 0
+        }
 
-    /* 欣玫 - 粉紅 */
-
-
-
-    .duty-6 {
-      background-color: #DDA0DD;
-    }
-
-    /* 方青 - 淡紫 */
-
-
-    .duty-7 {
-      background-color: #0f485b;
-    }
-
-    /* 佩璇 - 淡紫 */
-
-
-    .legend-container {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 30px;
-      background: white;
-      opacity: 0.9;
-      padding: 10px;
-      border-radius: 8px;
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 14px;
-    }
-
-    .legend-color {
-      width: 20px;
-      height: 20px;
-      border-radius: 4px;
-    }
-  </style>
+        .legend-item span {
+            flex: 1 1 auto;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap
+        }
+    </style>
 </head>
 
 <body>
-  <h1 id="monthYear"></h1>
-  <div class="nav-buttons">
-    <button onclick="changeMonth(-1)">← 上個月</button>
-    <button onclick="changeMonth(1)">下個月 →</button>
-  </div>
-  <table>
-    <thead>
-      <tr>
-        <th>一</th>
-        <th>二</th>
-        <th>三</th>
-        <th>四</th>
-        <th>五</th>
-        <th>六</th>
-        <th>日</th>
-      </tr>
-    </thead>
-    <tbody id="calendarBody"></tbody>
-  </table>
+    <div class="shell">
+        <h1>值日生輪替日曆</h1>
+        <div class="sub">每週一換人｜今日清楚高亮｜簡化可維護</div>
 
-  <h2>本週值日生</h2>
-  <p id="dutyPerson">待安排</p>
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <button id="prevBtn" class="btn ghost">← 上一月</button>
+                <div class="month-title" id="monthTitle">—</div>
+                <button id="nextBtn" class="btn ghost">下一月 →</button>
+            </div>
+            <div class="toolbar-right">
+                <div class="current-duty" id="currentDutyBox"
+                    style="background:#f4f8f7;padding:8px 12px;border-radius:12px;display:flex;align-items:center;gap:10px;">
+                    <span
+                        style="background:#dbe7e8;color:#1f3b3d;border-radius:999px;padding:3px 8px;font-weight:700;font-size:13px;">本週值日</span>
+                    <span id="currentDutyName" style="font-weight:700;">—</span>
+                </div>
+            </div>
+        </div>
 
-  <div class="legend-container">
-    <div class="legend-item">
-      <div class="legend-color" style="background-color: #FFA07A;"></div> 宸瑜
+        <div class="weekdays">
+            <div>週一</div>
+            <div>週二</div>
+            <div>週三</div>
+            <div>週四</div>
+            <div>週五</div>
+            <div>週六</div>
+            <div>週日</div>
+        </div>
+        <div class="calendar" id="calendar"></div>
+
+        <div class="panel">
+            <h3 style="margin:4px 0 10px;color:#3e6066;">成員圖例（純展示）</h3>
+            <div class="legend" id="legend"></div>
+        </div>
+
+        <div class="sub" id="todayInfo" style="margin-top:10px;"></div>
     </div>
-    <div class="legend-item">
-      <div class="legend-color" style="background-color: #ADD8E6;"></div> 宸瑄
-    </div>
-    <div class="legend-item">
-      <div class="legend-color" style="background-color: #98FB98;"></div> 旻億
-    </div>
-    <div class="legend-item">
-      <div class="legend-color" style="background-color: #FFD700;"></div> 品潔
-    </div>
-    <div class="legend-item">
-      <div class="legend-color" style="background-color: #FFC0CB;"></div> 欣玫
-    </div>
-    <div class="legend-item">
-      <div class="legend-color" style="background-color: #DDA0DD;"></div> 方青
-    </div>
-    <div class="legend-item">
-      <div class="legend-color" style="background-color: #0f485b;"></div> 佩璇
-    </div>
-  </div>
 
-  <script>
-    const dutyRoster = ["欣玫", "方青", "佩璇", "宸瑜", "宸瑄", "旻億", "品潔"];
-    const baseDate = new Date(2024, 2, 17);
-    const offset = 0;
-    let currentDate = new Date();
+    <script>
+        /**
+         * ======= [EDIT] 可編輯區 =======
+         * PEOPLE：名單與代表色（排列即輪替順序）
+         * baselineDate / baselineIndex：指定某週一對應名單中的哪一位
+         */
+        const PEOPLE = [
+            { name: '宸瑜', color: '#F6D8BE' },
+            { name: '宸瑄', color: '#D6E6F2' },
+            { name: '旻億', color: '#D7E7C7' },
+            { name: '品潔', color: '#F4E3B8' },
+            { name: '欣玫', color: '#E5D7EF' },
+            { name: '方青', color: '#CCE7E4' },
+            { name: '佩璇', color: '#F5D5CC' },
+            { name: '量量', color: '#E9EFC4' }
+        ];
+        // 2025-10-20（週一）→ PEOPLE[6] = 佩璇
+        const baselineDate = new Date(2025, 9, 20); // 月份 0 起算
+        const baselineIndex = 6; // 0-based
 
-    function generateCalendar(date) {
-      const year = date.getFullYear();
-      const month = date.getMonth();
-      const today = new Date();
-      const todayYear = today.getFullYear();
-      const todayMonth = today.getMonth();
-      const todayDate = today.getDate();
-      const firstDay = (new Date(year, month, 1).getDay() + 6) % 7;
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
+        // ======= 工具 =======
+        function toMonday(d) { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setHours(0, 0, 0, 0); const day = x.getDay(); const delta = (day === 0 ? -6 : 1 - day); x.setDate(x.getDate() + delta); return x; }
+        function weekDiff(a, b) { return Math.round((a - b) / (7 * 24 * 3600 * 1000)); }
+        function dutyForWeek(mon) { const k = weekDiff(mon, toMonday(baselineDate)); const n = PEOPLE.length; const idx = ((baselineIndex + k) % n + n) % n; return PEOPLE[idx]; }
+        function dailyPhrase(d) { const p = ['今天就交給你啦！', '小小整潔，大大舒心。', '補充茶包與衛生紙，感謝你！', '你的用心，大家都看見。', '今天的你，最會發亮。', '整理，是對同事的溫柔。']; const seed = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); return p[seed % p.length]; }
 
-      document.getElementById("monthYear").innerText = `${year} 年 ${month + 1} 月`;
-      const calendarBody = document.getElementById("calendarBody");
-      calendarBody.innerHTML = "";
+        // ======= 畫面狀態 =======
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        let viewYear = today.getFullYear();
+        let viewMonth = today.getMonth();
 
-      let row = document.createElement("tr");
-      for (let i = 0; i < firstDay; i++) {
-        row.appendChild(document.createElement("td"));
-      }
+        const $monthTitle = document.getElementById('monthTitle');
+        const $calendar = document.getElementById('calendar');
+        const $legend = document.getElementById('legend');
+        const $prevBtn = document.getElementById('prevBtn');
+        const $nextBtn = document.getElementById('nextBtn');
+        const $currentDutyName = document.getElementById('currentDutyName');
+        const $todayInfo = document.getElementById('todayInfo');
 
-      for (let day = 1; day <= daysInMonth; day++) {
-        const cell = document.createElement("td");
-        cell.innerText = day;
+        $prevBtn.addEventListener('click', () => changeMonth(-1));
+        $nextBtn.addEventListener('click', () => changeMonth(1));
 
-        const thisDate = new Date(year, month, day);
-        const thisMonday = new Date(thisDate);
-        thisMonday.setDate(thisDate.getDate() - ((thisDate.getDay() + 6) % 7));
+        function changeMonth(d) { viewMonth += d; if (viewMonth < 0) { viewMonth = 11; viewYear--; } if (viewMonth > 11) { viewMonth = 0; viewYear++; } render(); }
 
-        let weekDiff = Math.floor((thisMonday - baseDate) / (7 * 24 * 60 * 60 * 1000));
-        let dutyIndex = ((weekDiff + offset) % dutyRoster.length + dutyRoster.length) % dutyRoster.length;
-
-        cell.classList.add(`duty-${dutyIndex + 1}`);
-        cell.setAttribute("data-duty", dutyRoster[dutyIndex]);
-
-        if (year === todayYear && month === todayMonth && day === todayDate) {
-          cell.classList.add("today");
-          document.getElementById("dutyPerson").innerText = `本週值日生: ${dutyRoster[dutyIndex]}`;
+        function renderHeader() {
+            $monthTitle.textContent = `${viewYear} 年 ${viewMonth + 1} 月`;
+            $todayInfo.textContent = `今日：${today.toLocaleDateString('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'long' })}`;
+            const thisMon = toMonday(today); const duty = dutyForWeek(thisMon);
+            $currentDutyName.textContent = duty ? duty.name : '—';
+            const box = document.getElementById('currentDutyBox'); box.style.border = '2px solid ' + (duty ? duty.color : '#ccc');
         }
 
-        row.appendChild(cell);
-        if ((firstDay + day) % 7 === 0) {
-          calendarBody.appendChild(row);
-          row = document.createElement("tr");
+        function renderLegend() {
+            $legend.innerHTML = '';
+            PEOPLE.forEach(p => {
+                const i = document.createElement('div'); i.className = 'legend-item';
+                const c = document.createElement('div'); c.className = 'color-box'; c.style.background = p.color;
+                const t = document.createElement('span'); t.textContent = p.name;
+                i.appendChild(c); i.appendChild(t); $legend.appendChild(i);
+            });
         }
-      }
 
-      if (row.childElementCount > 0) {
-        calendarBody.appendChild(row);
-      }
-    }
+        function renderCalendar() {
+            const first = new Date(viewYear, viewMonth, 1); first.setHours(0, 0, 0, 0);
+            const last = new Date(viewYear, viewMonth + 1, 0); last.setHours(0, 0, 0, 0);
+            const start = toMonday(first); const end = toMonday(last); end.setDate(end.getDate() + 6);
+            $calendar.innerHTML = '';
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                const date = new Date(d); const mon = toMonday(date); const duty = dutyForWeek(mon);
+                const cell = document.createElement('div'); cell.className = 'day' + (date.getMonth() === viewMonth ? '' : ' muted'); if (date.getTime() === today.getTime()) cell.classList.add('today');
+                const dateEl = document.createElement('div'); dateEl.className = 'date-badge'; dateEl.textContent = String(date.getDate());
+                const tag = document.createElement('div'); tag.className = 'person-tag'; if (duty) { tag.textContent = duty.name; tag.style.background = duty.color; } else { tag.textContent = '—'; tag.style.background = '#e5e7eb'; }
+                if (date.getTime() === today.getTime()) { const s = document.createElement('div'); s.className = 'sticker'; s.textContent = dailyPhrase(today); cell.appendChild(s); }
+                cell.appendChild(dateEl); cell.appendChild(tag); $calendar.appendChild(cell);
+            }
+        }
 
-    function changeMonth(diff) {
-      currentDate.setMonth(currentDate.getMonth() + diff);
-      generateCalendar(currentDate);
-    }
-
-    generateCalendar(currentDate);
-
-
-
-  </script>
+        function render() { renderHeader(); renderLegend(); renderCalendar(); }
+        render();
+    </script>
 </body>
 
 </html>
