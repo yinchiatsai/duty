@@ -1,1 +1,244 @@
 
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JINQUE | 值日生管理系統 v2.4</title>
+    <style>
+        :root {
+            --brand: #3e6066;
+            --bg: #fdfcf8;
+            --today-border: #f3b23c;
+            --border: rgba(0, 0, 0, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, "Noto Sans TC", sans-serif;
+            background: #f6f4ef;
+            color: #3b3b3b;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .shell {
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--brand);
+            margin-bottom: 5px;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            border-radius: 15px;
+            padding: 12px 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            background: var(--brand);
+            color: #fff;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #5f6a63;
+        }
+
+        .day {
+            background: white;
+            border-radius: 12px;
+            padding: 10px;
+            min-height: 105px;
+            position: relative;
+            border: 1px solid var(--border);
+        }
+
+        .day.muted {
+            opacity: 0.35;
+        }
+
+        .day.today {
+            border: 2.5px solid var(--today-border);
+            background: #fff7cc;
+            transform: scale(1.02);
+            z-index: 1;
+        }
+
+        .date-num {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .person-tag {
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+            box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .smile-quote {
+            font-size: 11px;
+            color: #886b3e;
+            margin-top: 8px;
+            font-style: italic;
+            line-height: 1.3;
+            border-top: 1px dashed rgba(0, 0, 0, 0.1);
+            padding-top: 4px;
+        }
+
+        .admin-info {
+            background: #fff;
+            border-radius: 15px;
+            padding: 15px;
+            margin-top: 20px;
+            border: 1px solid var(--border);
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="shell">
+        <h1>JINQUE 值日生輪替表</h1>
+
+        <div class="toolbar">
+            <div>
+                <button class="btn" style="background:#e7efee; color:#2f4a4f;" onclick="changeMonth(-1)">←</button>
+                <span id="monthTitle" style="font-weight: bold; font-size: 18px; margin: 0 15px;"></span>
+                <button class="btn" style="background:#e7efee; color:#2f4a4f;" onclick="changeMonth(1)">→</button>
+            </div>
+            <div>
+                <span style="font-size: 14px;">本週值日：</span>
+                <span id="currentWeekDuty" style="font-weight: bold; color: var(--brand); font-size: 18px;"></span>
+            </div>
+        </div>
+
+        <div class="weekdays">
+            <div>一</div>
+            <div>二</div>
+            <div>三</div>
+            <div>四</div>
+            <div>五</div>
+            <div>六</div>
+            <div>日</div>
+        </div>
+        <div id="calendar" class="calendar"></div>
+
+        <div class="admin-info">
+            💡 提示：若需永久更動人員，請修改程式碼中的 <b>MEMBER_NAMES</b> 清單。
+        </div>
+    </div>
+
+    <script>
+        /** * [ 管理員設定區 ] 
+         * 直接在這裡修改名字順序，新增的名字請放在最後面
+         */
+        const MEMBER_NAMES = ['沈瑄', '宸瑜', '旻億', '品潔', '欣玫', '方青', '佩璇', '量量'];
+
+        // 莫蘭迪色池
+        const COLOR_POOL = ['#F6D8BE', '#FFE4E1', '#D6E6F2', '#D7E7C7', '#F4E3B8', '#E5D7EF', '#CCE7E4', '#F5D5CC', '#E9EFC4', '#D2E2E2'];
+        const SMILE_QUOTES = ["今天的你比雷射雕刻還精準！", "辛苦啦！你是辦公室最閃亮的星。", "整理的是環境，療癒的是心情。", "今天的咖啡好像特別香，原來是你值日。", "金雀最專業的值日生上線啦！", "環境美化大師，就決定是你了！"];
+
+        // 建立人員物件 (自動配對顏色)
+        const members = MEMBER_NAMES.map((name, i) => ({
+            name: name,
+            color: COLOR_POOL[i % COLOR_POOL.length]
+        }));
+
+        // 設定基準：本週(2026-03-02)由名單第1位(沈瑄)開始
+        const CONFIG = {
+            baselineDate: "2026-03-02",
+            baselineIndex: 0
+        };
+
+        function toMonday(d) {
+            const x = new Date(d); x.setHours(0, 0, 0, 0);
+            const day = x.getDay();
+            const delta = (day === 0 ? -6 : 1 - day);
+            x.setDate(x.getDate() + delta);
+            return x;
+        }
+
+        function getDutyForDate(targetDate) {
+            const targetMon = toMonday(targetDate);
+            const baseMon = toMonday(new Date(CONFIG.baselineDate));
+            const weeks = Math.round((targetMon - baseMon) / (7 * 24 * 3600 * 1000));
+            const idx = ((CONFIG.baselineIndex + weeks) % members.length + members.length) % members.length;
+            return members[idx];
+        }
+
+        let viewDate = new Date();
+        function changeMonth(d) { viewDate.setMonth(viewDate.getMonth() + d); render(); }
+
+        function render() {
+            const year = viewDate.getFullYear();
+            const month = viewDate.getMonth();
+            document.querySelector('#monthTitle').innerText = `${year} 年 ${month + 1} 月`;
+            const calendar = document.querySelector('#calendar');
+            calendar.innerHTML = '';
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+
+            document.querySelector('#currentWeekDuty').innerText = getDutyForDate(today).name;
+
+            const firstDay = new Date(year, month, 1);
+            const startDate = toMonday(firstDay);
+
+            for (let i = 0; i < 42; i++) {
+                const curr = new Date(startDate);
+                curr.setDate(startDate.getDate() + i);
+                const dayEl = document.createElement('div');
+                dayEl.className = 'day' + (curr.getMonth() !== month ? ' muted' : '');
+
+                const duty = getDutyForDate(curr);
+                let content = `<div class="date-num">${curr.getDate()}</div><div class="person-tag" style="background:${duty.color}">${duty.name}</div>`;
+
+                if (curr.getTime() === today.getTime()) {
+                    dayEl.className += ' today';
+                    content += `<div class="smile-quote">✨ ${SMILE_QUOTES[curr.getDate() % SMILE_QUOTES.length]}</div>`;
+                }
+
+                dayEl.innerHTML = content;
+                calendar.appendChild(dayEl);
+            }
+        }
+
+        render();
+    </script>
+</body>
+
+</html>
