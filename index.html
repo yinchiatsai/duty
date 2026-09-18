@@ -34,9 +34,17 @@ import {getDatabase,ref,onValue,set,update} from 'https://www.gstatic.com/fireba
 import {getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
 // TODO：請換成你的 Firebase 專案設定
-const firebaseConfig={apiKey:"YOUR_API_KEY",authDomain:"YOUR_PROJECT.firebaseapp.com",databaseURL:"https://YOUR_PROJECT-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"YOUR_PROJECT",appId:"YOUR_APP_ID"};
+const firebaseConfig={
+  apiKey:"AIzaSyANejHvCp3bP0XdMcm_XvaoAGVFWY2BzaM",
+  authDomain:"goldenbirdduty.firebaseapp.com",
+  databaseURL:"https://goldenbirdduty-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"goldenbirdduty",
+  storageBucket:"goldenbirdduty.firebasestorage.app",
+  messagingSenderId:"1470563755",
+  appId:"1:1470563755:web:e366e62c4889d3aee77eee"
+};
 // TODO：填入允許管理的 Google 帳號 Email
-const ADMIN_EMAILS=['your-admin@gmail.com'];
+const ADMIN_EMAILS=['unrealmonde@gmail.com','hey2501@gmail.com','sun4041098@gmail.com'];
 const DEFAULT_MEMBERS=['光杰','旻億','方青','佩璇','量量','宸瑜','宸瑄','宇萱']; // 承儀已移除；其餘順序照舊
 const COLOR_POOL=['#F6D8BE','#FFE4E1','#D6E6F2','#D7E7C7','#F4E3B8','#E5D7EF','#CCE7E4','#F5D5CC','#E9EFC4','#D2E2E2'];
 const SMILE_QUOTES=["今天的你比雷射雕刻還精準！","辛苦啦！你是辦公室最閃亮的星。","整理的是環境，療癒的是心情。","今天的咖啡好像特別香，原來是你值日。","金雀最專業的值日生上線啦！","環境美化大師，就決定是你了！"];
