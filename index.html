@@ -34,15 +34,7 @@ import {getDatabase,ref,onValue,set,update} from 'https://www.gstatic.com/fireba
 import {getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
 // TODO：請換成你的 Firebase 專案設定
-const firebaseConfig={
-  apiKey:"AIzaSyANejHvCp3bP0XdMcm_XvaoAGVFWY2BzaM",
-  authDomain:"goldenbirdduty.firebaseapp.com",
-  databaseURL:"https://goldenbirdduty-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId:"goldenbirdduty",
-  storageBucket:"goldenbirdduty.firebasestorage.app",
-  messagingSenderId:"1470563755",
-  appId:"1:1470563755:web:e366e62c4889d3aee77eee"
-};
+const firebaseConfig={apiKey:"AIzaSyANejHvCp3bP0XdMcm_XvaoAGVFWY2BzaM",authDomain:"goldenbirdduty.firebaseapp.com",databaseURL:"https://goldenbirdduty-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"goldenbirdduty",storageBucket:"goldenbirdduty.firebasestorage.app",messagingSenderId:"1470563755",appId:"1:1470563755:web:e366e62c4889d3aee77eee"};
 // TODO：填入允許管理的 Google 帳號 Email
 const ADMIN_EMAILS=['unrealmonde@gmail.com','hey2501@gmail.com','sun4041098@gmail.com'];
 const DEFAULT_MEMBERS=['光杰','旻億','方青','佩璇','量量','宸瑜','宸瑄','宇萱']; // 承儀已移除；其餘順序照舊
@@ -54,23 +46,27 @@ let data={members:{},swaps:{}},viewDate=new Date(),user=null;
 function toMonday(d){const x=new Date(d);x.setHours(0,0,0,0);const day=x.getDay();x.setDate(x.getDate()+(day===0?-6:1-day));return x}
 function key(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function parse(s){return new Date(s+'T00:00:00')}
-function activeMembersFor(mon){const list=Object.values(data.members||{}).sort((a,b)=>(a.order??999)-(b.order??999));return list.filter(m=>(!m.startDate||mon>=parse(m.startDate))&&(!m.endDate||mon<parse(m.endDate)))}
+function memberRecords(){
+  // 固定輪替是程式內建基礎資料；Firebase 只保存「異動」，因此資料庫即使是空的也能正常排班。
+  const base={};DEFAULT_MEMBERS.forEach((name,i)=>base['m'+i]={name,order:i,startDate:'2026-09-21',endDate:null});
+  return {...base,...(data.members||{})};
+}
+function activeMembersFor(mon){const list=Object.values(memberRecords()).sort((a,b)=>(a.order??999)-(b.order??999));return list.filter(m=>(!m.startDate||mon>=parse(m.startDate))&&(!m.endDate||mon<parse(m.endDate)))}
 function legacyDuty(mon){const legacy=['光杰','旻億','承儀','方青','佩璇','量量','宸瑜','宸瑄','宇萱'];const base=toMonday(parse(CONFIG.baselineDate));const weeks=Math.round((mon-base)/604800000);return legacy[((weeks%legacy.length)+legacy.length)%legacy.length]}
 function baseDuty(mon){if(key(mon)<CONFIG.changeoverMonday)return legacyDuty(mon);const start=parse(CONFIG.changeoverMonday);let roster=activeMembersFor(start);if(!roster.length)return ''; // 9/21 起承儀離職，從原本承儀之後的方青接續
 let startIndex=Math.max(0,roster.findIndex(m=>m.name==='方青'));let cursor=new Date(start),idx=startIndex;while(cursor<mon){cursor.setDate(cursor.getDate()+7);const current=activeMembersFor(cursor);if(!current.length)return '';const prevName=roster[idx%roster.length]?.name;roster=current;let p=roster.findIndex(m=>m.name===prevName);idx=(p>=0?p+1:idx)%roster.length}return roster[idx%roster.length]?.name||''}
 function getDuty(d){const mon=toMonday(d),k=key(mon),swap=data.swaps?.[k];return swap?.actual||baseDuty(mon)}
-function colorFor(name){const all=[...new Set([...DEFAULT_MEMBERS,'承儀',...Object.values(data.members||{}).map(x=>x.name)])];return COLOR_POOL[Math.max(0,all.indexOf(name))%COLOR_POOL.length]}
+function colorFor(name){const all=[...new Set([...DEFAULT_MEMBERS,'承儀',...Object.values(memberRecords()).map(x=>x.name)])];return COLOR_POOL[Math.max(0,all.indexOf(name))%COLOR_POOL.length]}
 function render(){const y=viewDate.getFullYear(),m=viewDate.getMonth();monthTitle.innerText=`${y} 年 ${m+1} 月`;calendar.innerHTML='';const today=new Date();today.setHours(0,0,0,0);currentWeekDuty.innerText=getDuty(today)||'—';const start=toMonday(new Date(y,m,1));for(let i=0;i<42;i++){const curr=new Date(start);curr.setDate(start.getDate()+i);const mon=toMonday(curr),duty=getDuty(curr),swap=data.swaps?.[key(mon)];const el=document.createElement('div');el.className='day'+(curr.getMonth()!==m?' muted':'')+(curr.getTime()===today.getTime()?' today':'');let c=`<div class="date-num">${curr.getDate()}</div><div class="person-tag" style="background:${colorFor(duty)}">${duty||'—'}</div>`;if(swap)c+=`<div class="swap-note">↔ 臨時調度</div>`;if(curr.getTime()===today.getTime())c+=`<div class="smile-quote">✨ ${SMILE_QUOTES[curr.getDate()%SMILE_QUOTES.length]}</div>`;el.innerHTML=c;calendar.appendChild(el)}}
 window.changeMonth=d=>{viewDate.setMonth(viewDate.getMonth()+d);render()};
-async function ensureDefaults(){const snapMembers=data.members||{};if(Object.keys(snapMembers).length)return;const obj={};DEFAULT_MEMBERS.forEach((name,i)=>obj['m'+i]={name,order:i,startDate:'2026-09-21',endDate:null});await set(ref(db,'dutyRoster/members'),obj)}
-onValue(ref(db,'dutyRoster'),async s=>{data=s.val()||{members:{},swaps:{}};await ensureDefaults();render();renderMembers()});
+onValue(ref(db,'dutyRoster'),s=>{data=s.val()||{members:{},swaps:{}};render();renderMembers()});
 function isAdmin(){return user&&ADMIN_EMAILS.includes((user.email||'').toLowerCase())}
 onAuthStateChanged(auth,u=>{user=u;loginArea.classList.toggle('hidden',isAdmin());adminArea.classList.toggle('hidden',!isAdmin());adminStatus.textContent=isAdmin()?`已登入：${u.email}`:(u?'此帳號沒有管理權限':'');renderMembers()});
 adminBtn.onclick=()=>adminModal.classList.add('show');closeAdminBtn.onclick=()=>adminModal.classList.remove('show');loginBtn.onclick=()=>signInWithPopup(auth,provider);logoutBtn.onclick=()=>signOut(auth);
 swapBtn.onclick=async()=>{if(!isAdmin()||!swapDate.value)return;const mon=toMonday(parse(swapDate.value)),next=new Date(mon);next.setDate(next.getDate()+7);const k1=key(mon),k2=key(next),a=baseDuty(mon),b=baseDuty(next);await update(ref(db,'dutyRoster/swaps'),{[k1]:{original:a,actual:b,pairedWith:k2},[k2]:{original:b,actual:a,pairedWith:k1}})};
 cancelSwapBtn.onclick=async()=>{if(!isAdmin()||!swapDate.value)return;const k=key(toMonday(parse(swapDate.value))),s=data.swaps?.[k];if(!s)return;await update(ref(db,'dutyRoster/swaps'),{[k]:null,[s.pairedWith]:null})};
-function renderMembers(){if(!isAdmin()||!memberList)return;memberList.innerHTML='';Object.entries(data.members||{}).sort((a,b)=>(a[1].order??999)-(b[1].order??999)).forEach(([id,m])=>{const div=document.createElement('div');div.className='member';div.innerHTML=`<div><b>${m.name}</b><div class="small">${m.endDate?'停止輪值：'+m.endDate:'輪值中'}</div></div><button class="btn light">停止輪值</button>`;div.querySelector('button').onclick=async()=>{const v=prompt('從哪一天起停止輪值？請輸入 YYYY-MM-DD',key(new Date()));if(v)await update(ref(db,`dutyRoster/members/${id}`),{endDate:key(toMonday(parse(v)))})};memberList.appendChild(div)})}
-addMemberBtn.onclick=async()=>{if(!isAdmin())return;const name=newMemberName.value.trim(),start=newMemberStart.value;if(!name||!start)return;const list=Object.values(data.members||{}),id='m'+Date.now();await set(ref(db,`dutyRoster/members/${id}`),{name,order:list.length,startDate:key(toMonday(parse(start))),endDate:null});newMemberName.value=''};
+function renderMembers(){if(!isAdmin()||!memberList)return;memberList.innerHTML='';Object.entries(memberRecords()).sort((a,b)=>(a[1].order??999)-(b[1].order??999)).forEach(([id,m])=>{const div=document.createElement('div');div.className='member';div.innerHTML=`<div><b>${m.name}</b><div class="small">${m.endDate?'停止輪值：'+m.endDate:'輪值中'}</div></div><button class="btn light">停止輪值</button>`;div.querySelector('button').onclick=async()=>{const v=prompt('從哪一天起停止輪值？請輸入 YYYY-MM-DD',key(new Date()));if(v)await update(ref(db,`dutyRoster/members/${id}`),{endDate:key(toMonday(parse(v)))})};memberList.appendChild(div)})}
+addMemberBtn.onclick=async()=>{if(!isAdmin())return;const name=newMemberName.value.trim(),start=newMemberStart.value;if(!name||!start)return;const list=Object.values(memberRecords()),id='m'+Date.now();await set(ref(db,`dutyRoster/members/${id}`),{name,order:list.length,startDate:key(toMonday(parse(start))),endDate:null});newMemberName.value=''};
 render();
 </script>
 </body></html>
