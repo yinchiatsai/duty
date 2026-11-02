@@ -6,7 +6,36 @@ const cfg={apiKey:'AIzaSyANejHvCp3bP0XdMcm_XvaoAGVFWY2BzaM',authDomain:'goldenbi
 const ADMINS=['unrealmonde@gmail.com','hey2501@gmail.com','sun4041098@gmail.com'];const INITIAL=['光杰','旻億','方青','佩璇','量量','宸瑜','宸瑄','宇萱'];const OLD=['光杰','旻億','承儀','方青','佩璇','量量','宸瑜','宸瑄','宇萱'];const START='2026-09-21';const app=initializeApp(cfg),db=getDatabase(app),auth=getAuth(app);const $=id=>document.getElementById(id);let store={},me=null,view=new Date(),ready=false;
 function date(s){return new Date(s+'T12:00:00')}function iso(d){return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')}function monday(d){let x=new Date(d);x.setHours(12,0,0,0);x.setDate(x.getDate()-((x.getDay()+6)%7));return x}function nextWeek(d){let x=new Date(d);x.setDate(x.getDate()+7);return x}function weeks(a,b){return Math.round((b-a)/604800000)}function validDate(s){return /^\d{4}-\d{2}-\d{2}$/.test(s)&&!isNaN(date(s))}function admin(){return me&&ADMINS.includes((me.email||'').toLowerCase())}function msg(s,err=false){$('message').textContent=s;$('message').classList.toggle('error',err)}function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function events(){return Object.entries(store.changes||{}).map(([id,v])=>({...v,id})).filter(x=>validDate(x.week)).sort((a,b)=>a.week.localeCompare(b.week)||a.id.localeCompare(b.id))}
-function scheduleUntil(target){const targetKey=iso(monday(target));if(targetKey<START){const w=weeks(date('2026-03-02'),monday(target));return {name:OLD[((w%9)+9)%9],roster:OLD.slice()}}let roster=INITIAL.slice(),cursor=2,result='',ev=events();for(let d=date(START);iso(d)<=targetKey;d=nextWeek(d)){let k=iso(d),forced='';for(const e of ev.filter(x=>x.week===k)){if(e.type==='add'){if(!roster.includes(e.name)){roster.push(e.name)}if(e.firstDuty)forced=e.name}else if(e.type==='remove'){let i=roster.indexOf(e.name);if(i>=0){roster.splice(i,1);if(i<cursor)cursor--;if(cursor>=roster.length)cursor=0}}}if(!roster.length){result='—';continue}if(forced){result=forced}else{result=roster[cursor%roster.length];cursor=(cursor+1)%roster.length}}return {name:result,roster}}
+function scheduleUntil(target){
+  const targetKey=iso(monday(target));
+  if(targetKey<START){const w=weeks(date('2026-03-02'),monday(target));return {name:OLD[((w%9)+9)%9],roster:OLD.slice()}}
+  let roster=INITIAL.slice(),cursor=2,result='',ev=events();
+  for(let d=date(START);iso(d)<=targetKey;d=nextWeek(d)){
+    const k=iso(d);
+    for(const e of ev.filter(x=>x.week===k)){
+      if(e.type==='remove'){
+        const i=roster.indexOf(e.name);
+        if(i>=0){roster.splice(i,1);if(i<cursor)cursor--;if(roster.length)cursor=((cursor%roster.length)+roster.length)%roster.length;else cursor=0}
+      }else if(e.type==='add'&&!roster.includes(e.name)){
+        if(e.firstDuty){
+          // 插在當週原本輪到的人之前：新人本週值日，原本的人下週接續。
+          // 因此下一輪新人仍固定在同一位置，不會跑到最後一位之後。
+          const at=roster.length?cursor%roster.length:0;
+          roster.splice(at,0,e.name);
+          cursor=at;
+        }else{
+          // 未指定立即值日：加入正式輪替尾端，不更動目前輪值位置。
+          roster.push(e.name);
+        }
+      }
+    }
+    if(!roster.length){result='—';continue}
+    cursor=((cursor%roster.length)+roster.length)%roster.length;
+    result=roster[cursor];
+    cursor=(cursor+1)%roster.length;
+  }
+  return {name:result,roster};
+}
 function duty(d){const k=iso(monday(d));return store.swaps?.[k]?.actual||scheduleUntil(d).name}
 const MEMBER_COLORS={'光杰':'#F6D8BE','旻億':'#FFE4E1','方青':'#D6E6F2','佩璇':'#D7E7C7','量量':'#F4E3B8','宸瑜':'#E5D7EF','宸瑄':'#CCE7E4','宇萱':'#F5D5CC','媛媛':'#E9EFC4','承儀':'#D2E2E2'};
 const SMILE_QUOTES=['今天的你比雷射雕刻還精準！','辛苦啦！你是辦公室最閃亮的星。','整理的是環境，療癒的是心情。','今天的咖啡好像特別香，原來是你值日。','金雀最專業的值日生上線啦！','環境美化大師，就決定是你了！'];
@@ -17,7 +46,7 @@ function people(){if(!admin())return;let all=events().filter(e=>e.type==='add'),
 async function writePaths(changes,success){if(!admin()){msg('請先使用管理員帳號登入',true);return}try{msg('正在儲存…');let p={};for(const [k,v] of Object.entries(changes))p[k]=v;await update(ref(db,'dutyRoster'),p);msg(success)}catch(e){msg('儲存失敗：'+e.message,true)}}
 async function editAddition(e){
   if(!admin())return;
-  const raw=prompt(`調整「${e.name}」加入日期（YYYY-MM-DD）。\n勾選首次值日後，該週由新人值日，原排定人員順延。`,e.week);
+  const raw=prompt(`調整「${e.name}」加入日期（YYYY-MM-DD）。\n指定當週立即值日後，新人固定排在當週原排定人員之前，往後每輪順序不變。`,e.week);
   if(raw===null)return;
   if(!validDate(raw)){msg('日期格式錯誤，請輸入 YYYY-MM-DD',true);return}
   const k=iso(monday(date(raw)));
@@ -29,7 +58,7 @@ async function editAddition(e){
 }
 async function eraseEvent(e){if(!confirm(`確定撤銷「${e.name}」於 ${e.week} 的${e.type==='add'?'新增':'停止'}事件？可能影響該週之後班表。`))return;await writePaths({[`changes/${e.id}`]:null},'已撤銷事件')}
 async function stopMember(name){let s=prompt(`「${name}」從哪一天起停止輪值？請輸入 YYYY-MM-DD`,iso(nextWeek(monday(new Date()))));if(s===null)return;if(!validDate(s)){msg('日期格式錯誤',true);return}let k=iso(monday(date(s)));if(k<iso(monday(new Date()))&&!confirm('你選了過去日期，這可能改變歷史班表，確定嗎？'))return;let id='c'+Date.now();await writePaths({[`changes/${id}`]:{type:'remove',name,week:k}},`${name} 將從 ${k} 停止輪值`)}
-$('add').onclick=async()=>{let name=$('addName').value.trim(),s=$('addDate').value;if(!name||!validDate(s)){msg('請輸入姓名並選擇日期',true);return}let k=iso(monday(date(s)));if(k<START){msg('新增日期不得早於 2026/09/21',true);return}if(events().some(e=>e.type==='add'&&e.name===name)||INITIAL.includes(name)){msg('此姓名已存在正式輪替中，請勿重複新增',true);return}if(Object.values(store.members||{}).some(v=>v.name===name)){if(!confirm(`Firebase 還有「${name}」的舊版紀錄。新版將另外建立正式輪替事件；舊紀錄會保留供管理員清理。確定繼續？`))return}let first=$('firstDuty').checked;if(!confirm(`確認新增 ${name}，生效週 ${k}，${first?'當週由新人值日，原排定者順延':'依序輪到新人時才值日'}？`))return;let id='c'+Date.now();await writePaths({[`changes/${id}`]:{type:'add',name,week:k,firstDuty:first}},`${name} 已加入，${first?`將於 ${k} 首次值日`:`從 ${k} 納入輪替`}`);$('addName').value=''};
+$('add').onclick=async()=>{let name=$('addName').value.trim(),s=$('addDate').value;if(!name||!validDate(s)){msg('請輸入姓名並選擇日期',true);return}let k=iso(monday(date(s)));if(k<START){msg('新增日期不得早於 2026/09/21',true);return}if(events().some(e=>e.type==='add'&&e.name===name)||INITIAL.includes(name)){msg('此姓名已存在正式輪替中，請勿重複新增',true);return}if(Object.values(store.members||{}).some(v=>v.name===name)){if(!confirm(`Firebase 還有「${name}」的舊版紀錄。新版將另外建立正式輪替事件；舊紀錄會保留供管理員清理。確定繼續？`))return}let first=$('firstDuty').checked;if(!confirm(`確認新增 ${name}，生效週 ${k}，${first?'當週由新人值日並固定插入該位置，原排定者順延':'依序輪到新人時才值日'}？`))return;let id='c'+Date.now();await writePaths({[`changes/${id}`]:{type:'add',name,week:k,firstDuty:first}},`${name} 已加入，${first?`將於 ${k} 首次值日`:`從 ${k} 納入輪替`}`);$('addName').value=''};
 $('swap').onclick=async()=>{let s=$('swapDate').value;if(!validDate(s)){msg('請選擇換班日期',true);return}let a=monday(date(s)),b=nextWeek(a),k1=iso(a),k2=iso(b);if(store.swaps?.[k1]||store.swaps?.[k2]){msg('這兩週已有臨時調度，請先取消',true);return}let x=scheduleUntil(a).name,y=scheduleUntil(b).name;if(!confirm(`確認交換 ${k1} ${x} 與 ${k2} ${y}？`))return;await writePaths({[`swaps/${k1}`]:{actual:y,original:x,pairedWith:k2},[`swaps/${k2}`]:{actual:x,original:y,pairedWith:k1}},'已完成兩週交換')};
 $('unswap').onclick=async()=>{let s=$('swapDate').value;if(!validDate(s)){msg('請選擇日期',true);return}let k=iso(monday(date(s))),v=store.swaps?.[k];if(!v){msg('該週沒有調度紀錄',true);return}await writePaths({[`swaps/${k}`]:null,[`swaps/${v.pairedWith}`]:null},'已取消交換')};
 $('prev').onclick=()=>{view=new Date(view.getFullYear(),view.getMonth()-1,1);render()};$('next').onclick=()=>{view=new Date(view.getFullYear(),view.getMonth()+1,1);render()};$('open').onclick=()=>$('overlay').classList.add('open');$('close').onclick=()=>$('overlay').classList.remove('open');$('login').onclick=async()=>{try{await signInWithPopup(auth,new GoogleAuthProvider())}catch(e){msg('登入失敗：'+e.message,true)}};$('logout').onclick=()=>signOut(auth);$('addDate').value=iso(nextWeek(monday(new Date())));$('swapDate').value=iso(monday(new Date()));onAuthStateChanged(auth,u=>{me=u;$('loginArea').classList.toggle('hidden',!!admin());$('adminArea').classList.toggle('hidden',!admin());$('account').textContent=admin()?'已登入：'+u.email:'';if(u&&!admin())msg('這個 Google 帳號沒有管理權限',true);people()});onValue(ref(db,'dutyRoster'),s=>{store=s.val()||{};ready=true;render();people();if($('message').textContent==='載入中…')msg('已連線 Firebase')},e=>msg('資料庫讀取失敗：'+e.message,true));render();
